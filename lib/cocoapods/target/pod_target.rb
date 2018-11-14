@@ -102,6 +102,10 @@ module Pod
       @build_config_cache = {}
       @test_spec_build_settings = create_test_build_settings
       @app_spec_build_settings = create_app_build_settings
+      @build_settings_for_non_library_spec = specs.each_with_object({}) do |spec, build_settings_for_non_library_spec|
+        next unless spec.non_library_specification?
+        build_settings_for_non_library_spec[spec] = BuildSettings::PodTargetSettings.new(self, spec)
+      end.freeze
     end
 
     # Scopes the current target based on the existing pod targets within the cache.
@@ -717,6 +721,16 @@ module Pod
         header_search_paths.concat(sandbox.public_headers.search_paths(platform, dependent_target.pod_name, defines_module? && dependent_target.uses_modular_headers?(false)))
       end
       header_search_paths.uniq
+    end
+
+    # @param  [Specification] spec non-library spec
+    #
+    # @return [BuildSettings::PodTargetSettings] The build settings for the given spec
+    #
+    def build_settings_for_spec(spec)
+      @build_settings_for_non_library_spec.fetch(spec) do
+        raise ArgumentError, "Requested build settings for #{spec}, only specs are #{@build_settings_for_non_library_spec.keys}"
+      end
     end
 
     protected
